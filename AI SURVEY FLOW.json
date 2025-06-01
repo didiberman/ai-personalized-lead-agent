@@ -1,0 +1,567 @@
+{
+  "name": "Sam's Survey AI Flow",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "=http://ip-api.com/json/{{ $json.body.attributionSource.ip }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        -1340
+      ],
+      "id": "835f2093-f3e5-4cf4-86b6-30b8d3505273",
+      "name": "IP Country Check"
+    },
+    {
+      "parameters": {
+        "jsCode": "const country = $json.country;\n\n// List of all African countries except South Africa\nconst africanCountries = [\n  \"Nigeria\", \"Kenya\", \"Egypt\", \"Morocco\", \"Ghana\", \"Ethiopia\", \"Algeria\",\n  \"Uganda\", \"Tanzania\", \"Zambia\", \"Zimbabwe\", \"Cameroon\", \"Ivory Coast\",\n  \"Senegal\", \"Angola\", \"Mozambique\", \"Rwanda\", \"Tunisia\", \"Sudan\", \"Mali\",\n  \"Burkina Faso\", \"Niger\", \"Chad\", \"Guinea\", \"Benin\", \"Togo\", \"Botswana\",\n  \"Namibia\", \"DR Congo\", \"Republic of the Congo\", \"Gabon\", \"Lesotho\", \"Eswatini\"\n  // Add or remove as needed\n];\n\n// Low-value Asian countries (adjust based on your criteria)\nconst lowValueAsianCountries = [\n  \"India\", \"Bangladesh\", \"Pakistan\", \"Nepal\", \"Afghanistan\", \"Myanmar\", \"Cambodia\", \"Laos\"\n];\n\nconst isAfricanTarget = africanCountries.includes(country);\nconst isLowValueAsia = lowValueAsianCountries.includes(country);\n\nif (isAfricanTarget || isLowValueAsia) {\n  return [{ json: { match: true, country } }];\n} else {\n  return [{ json: { match: false, country } }];\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        -1340
+      ],
+      "id": "0cbc643d-17e4-429c-b12a-848fff7beb35",
+      "name": "Country Check"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0357b63e-f533-4ca8-8048-080b9e7ad6af",
+              "leftValue": "={{ $json.match }}",
+              "rightValue": "false",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        300,
+        -1340
+      ],
+      "id": "71f95bd0-ca13-40dc-abfb-fb635da0611f",
+      "name": "Remove Low Value Countries"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/apify~instagram-scraper/runs",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n      \"directUrls\": [\n        \"https://www.instagram.com/{{ $json.clean_instagram }}/\"\n      ],\n      \"resultsType\": \"details\",\n      \"resultsLimit\": 30\n    }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        860,
+        -1120
+      ],
+      "id": "186fc1ae-e93b-4c34-b130-2150dc2d7895",
+      "name": "Start APIFY Actor",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "keCg8HzDopes8k7l",
+          "name": "Bearer Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.apify.com/v2/datasets/{{ $json.data.defaultDatasetId }}/items",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "format",
+              "value": "json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1300,
+        -1120
+      ],
+      "id": "6113035b-dac8-44e0-a32e-11ec531e05da",
+      "name": "Get Data from APIFY",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "keCg8HzDopes8k7l",
+          "name": "Bearer Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1080,
+        -1120
+      ],
+      "id": "53b38374-4b75-4f31-a115-1d7a1c86e586",
+      "name": "Wait 30s",
+      "webhookId": "dc3849c5-eb57-46f1-b40e-319610d8ffc0"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://services.leadconnectorhq.com/hooks/eA2811bhspmZRLrperbd/webhook-trigger/708ae76a-6878-4dca-9976-8447522e01fe",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "subject",
+              "value": "Analyzed your Instagram: Here's what's working (and what's not)"
+            },
+            {
+              "name": "email",
+              "value": "={{ $('Get Survey').item.json.body.email }}"
+            },
+            {
+              "name": "emailbody",
+              "value": "={{ $json.email_content }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2260,
+        -1360
+      ],
+      "id": "c110f246-55d8-4911-b253-dbfa0d91729c",
+      "name": "Send Email"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get email content from previous node\nconst emailContent = $input.first().json.text;\n\n// Convert line breaks to HTML\nlet htmlContent = emailContent.replace(/\\n/g, '<br>');\n\n// Convert **text** to <strong>text</strong> (bold)\nhtmlContent = htmlContent.replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>');\n\n// Convert URLs to clickable links\n// This regex matches http/https URLs\nconst urlRegex = /(https?:\\/\\/[^\\s<>\"{}|\\\\^`\\[\\]]+)/gi;\nhtmlContent = htmlContent.replace(urlRegex, '<a href=\"$1\" target=\"_blank\">$1</a>');\n\n// Optional: Also convert www. URLs (without http/https)\nconst wwwRegex = /(^|[^\\/])(www\\.[^\\s<>\"{}|\\\\^`\\[\\]]+)/gi;\nhtmlContent = htmlContent.replace(wwwRegex, '$1<a href=\"http://$2\" target=\"_blank\">$2</a>');\n\nreturn {\n  email_content: htmlContent,\n  // ... other fields you need to pass through\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2100,
+        -1500
+      ],
+      "id": "767f5a77-aefb-41e2-ab98-d241a990dae6",
+      "name": "Format for HTML"
+    },
+    {
+      "parameters": {
+        "chatId": "614587329",
+        "text": "={{ $json.telegram_content }}\nIG: https://www.instagram.com/{{ $json.clean_instagram }}/",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2700,
+        -1100
+      ],
+      "id": "d60a2183-4a1f-4b69-aad6-9ffc0c26640f",
+      "name": "Telegram",
+      "webhookId": "84787e49-cbce-4466-bc4d-2e1c301fd61f",
+      "credentials": {
+        "telegramApi": {
+          "id": "h0tFrdojMCLUa3s4",
+          "name": "Telegram account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Remove @ symbols from string - n8n Code Node\n// Place this in a Code node in your n8n workflow\n\n// Get the input string (adjust the field path as needed)\nconst inputString = $('Get Survey').first().json.body[\"Instagram @?\"] // Change this to your field name\n\n// Remove all @ symbols\nconst cleanString = inputString.replace(/@/g, '');\n\n// Return the cleaned string\nreturn {\n  json: {\n    ...$input.item.json,  // Keep all original data\n    clean_instagram: cleanString,  // Add cleaned version\n    original_instagram: inputString  // Keep original for reference\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        -1120
+      ],
+      "id": "0a4877f6-4825-48ed-9d61-08ede1a89f64",
+      "name": "fix instagram username"
+    },
+    {
+      "parameters": {
+        "jsCode": "// HTML to Telegram Formatter\n// Place this in a Code node in your n8n workflow\n\n// Get the HTML content from previous node\nconst htmlContent = $('Format for HTML').first().json.email_content; // Adjust field name as needed\n\n// Convert HTML to Telegram format\nlet telegramContent = htmlContent\n    // Line breaks\n    .replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<\\/p>/gi, '\\n')\n    .replace(/<p>/gi, '')\n    \n    // Bold formatting\n    .replace(/<strong>(.*?)<\\/strong>/gi, '*$1*')\n    .replace(/<b>(.*?)<\\/b>/gi, '*$1*')\n    \n    // Italic formatting\n    .replace(/<em>(.*?)<\\/em>/gi, '_$1_')\n    .replace(/<i>(.*?)<\\/i>/gi, '_$1_')\n    \n    // Links - convert to Telegram markdown format\n    .replace(/<a[^>]*href=\"([^\"]*)\"[^>]*>(.*?)<\\/a>/gi, '[$2]($1)')\n    \n    // Remove any remaining HTML tags\n    .replace(/<[^>]*>/g, '')\n    \n    // Clean up multiple line breaks\n    .replace(/\\n{3,}/g, '\\n\\n')\n    \n    // Trim whitespace\n    .trim();\n\n// Return the formatted content\nreturn {\n    json: {\n        ...$input.item.json,\n        telegram_content: telegramContent\n    }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2560,
+        -1100
+      ],
+      "id": "2c4d2d1f-3b31-4bc5-81e9-22026c0f1452",
+      "name": "Prep for Telegram"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "samsurvey",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        -1120
+      ],
+      "id": "03ba4fa4-71e7-4116-b35f-bb998b7addcf",
+      "name": "Get Survey",
+      "webhookId": "d5e4fbe8-a137-47b0-b98e-97296d42ca84"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-opus-4-20250514",
+          "mode": "list",
+          "cachedResultName": "Claude Opus 4"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        1460,
+        -1360
+      ],
+      "id": "21cbb584-bfae-4a51-828f-ee22cc62ae32",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "ShCF0RdJ2kuR49tt",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are Sam, an Instagram strategist who helps businesses get more clients from their content. Write a highly personalized email that feels authentic and creates curiosity.\n\n## Required Research Data\n- Instagram handle: {{ $json.username }}\n- Business type: {{ $('Get Survey').item.json.body.data['What best describes your business?'] }}\n- Biggest challenges: {{ $('Get Survey').item.json.body.data['Biggest challenge right now?'][0] }}\n- Goals/desired outcomes: {{ $('Get Survey').item.json.body.data['What do you want most?'][0] }}\n- Current revenue: {{ $('Get Survey').item.json.body.data['Monthly revenue?'] }}\n\n\n## Email Structure (100-150 words MAX)\n\n1. **Opening Hook:**\n   - Start with something unexpected or curious\n   - Reference ONE specific detail from their recent content\n   - Skip generic \"I looked at your profile\" openings\n\n2. **One Genuine Compliment:**\n   - Be specific about what they're doing well\n   - Connect it to their business goals\n\n3. **The Hook:**\n   - Identify ONE main opportunity (not 3+ problems)\n   - Create curiosity about the solution\n   - Don't give away the fix in the email\n\n4. **Simple Question:**\n   - Ask if they're actively trying to [achieve their stated goal]\n   - Make it easy to respond yes/no\n\n5. **Soft Call-to-Action:**\n   - \"Worth a quick call to explain?\"\n   - \"Interested in hearing how?\"\n   - Low pressure, high curiosity\n\n## Tone Guidelines\n- Write like you're texting a friend\n- Be conversational, not corporate\n- Show genuine interest in their success\n- Create curiosity gap (make them want to know more)\n- Focus on ONE thing, not everything\n\n## What to AVOID\n- Don't list multiple problems (overwhelming)\n- Don't give away solutions (no curiosity)\n- Don't use testimonials unless highly specific\n- Don't write more than 150 words\n- Don't sound like every other marketer\n\nAccount Username: {{ $json.username }}\nFull Name: {{ $json.fullName }}\nBio Description: {{ $json.biography }}\nBusiness Category: {{ $json.businessCategoryName }}\nAccount Metrics\nFollowers Count: {{ $json.followersCount }}\nFollowing Count: {{ $json.followsCount }}\nTotal Posts: {{ $json.postsCount }}\nRecent Content Analysis (Last 3 Posts)\nPost 1 Caption: {{ $json.latestPosts[0].caption }}\nPost 1 Type: {{ $json.latestPosts[0].type }}\nPost 1 Hashtags: {{ $json.latestPosts[0].hashtags }}\n\nPost 2 Caption: {{ $json.latestPosts[1].caption }}\nPost 2 Type: {{ $json.latestPosts[1].type }}\nPost 2 Hashtags: {{ $json.latestPosts[1].hashtags }}\n\nPost 3 Caption: {{ $json.latestPosts[2].caption }}\nPost 3 Type: {{ $json.latestPosts[2].type }}\nPost 3 Likes: {{ $json.latestPosts[2].likesCount }}\nPost 3 Hashtags: {{ $json.latestPosts[2].hashtags }}\n\n## Success Criteria\n- Email feels personal and researched\n- Creates curiosity about the solution\n- Easy to respond to\n- Under 150 words\n- Focuses on their specific goals/challenges\n\nNo subject line. No prefix/footer. Just the email content ready to send.\n\nIf you do not have enough data or enough information about the user for a personalized e-mail, please do not write anything in return and just return a completely empty response. This is important!"
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.6,
+      "position": [
+        1460,
+        -1620
+      ],
+      "id": "eb9087bd-b5d9-4216-a199-180e08fba462",
+      "name": "Generate Email",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "215333e5-fe9d-4518-bf38-649c339b2ca1",
+              "leftValue": "={{ $('Generate Email').item.json.text }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1900,
+        -1340
+      ],
+      "id": "27ff10c8-26fc-4349-a8f5-6ffd13de349c",
+      "name": "Not empty? Send!"
+    },
+    {
+      "parameters": {
+        "content": "CHANGE PROMPT HERE\n",
+        "height": 260,
+        "width": 420
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1400,
+        -1660
+      ],
+      "typeVersion": 1,
+      "id": "872d505b-dafb-46d4-836c-3d0da80b7912",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## GUIDELINES\n\nThis automation receives a Survey from Sam's CourseCreator360 then removes low-value countries,\nscrapes the Instagram profile via APIFY\nCreates a personalized E-mail, sends it to the user, and sends Yadid the email via Telegram for inspection\n",
+        "height": 540,
+        "width": 840
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -280,
+        -1480
+      ],
+      "typeVersion": 1,
+      "id": "f0e12af2-cef3-4bf4-b28c-bd720ef2c72e",
+      "name": "Sticky Note1"
+    }
+  ],
+  "pinData": {
+    "Get Survey": [
+      {
+        "json": {
+          "headers": {
+            "host": "sam.didibeing.social",
+            "user-agent": "python-requests/2.31.0",
+            "content-length": "549",
+            "accept": "*/*",
+            "accept-encoding": "gzip, deflate",
+            "content-type": "application/json",
+            "x-forwarded-for": "134.122.123.142",
+            "x-forwarded-host": "sam.didibeing.social",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "8a84c925508c",
+            "x-real-ip": "134.122.123.142"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "contact_id": "test_contact_123",
+            "email": "yadidb@pm.me",
+            "Instagram @?": "yadidians",
+            "What best describes your business?": "Photography/Videography",
+            "Biggest challenge right now?": [
+              "Not enough time for content creation",
+              "Content not getting attention"
+            ],
+            "How soon do you want results?": "ASAP (next 30 days )",
+            "What do you want most?": [
+              "More high-ticket clients",
+              "Better personal brand"
+            ],
+            "Monthly revenue?": "$5K - $10K",
+            "Anything else you'd like to share? (Optional)": "I want to improve my Instagram presence to attract more clients."
+          },
+          "webhookUrl": "https://YOUR-DOMAIN.com/webhook-test/samsurvey",
+          "executionMode": "test"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "IP Country Check": {
+      "main": [
+        [
+          {
+            "node": "Country Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Country Check": {
+      "main": [
+        [
+          {
+            "node": "Remove Low Value Countries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Low Value Countries": {
+      "main": [
+        [
+          {
+            "node": "fix instagram username",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start APIFY Actor": {
+      "main": [
+        [
+          {
+            "node": "Wait 30s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 30s": {
+      "main": [
+        [
+          {
+            "node": "Get Data from APIFY",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Data from APIFY": {
+      "main": [
+        [
+          {
+            "node": "Generate Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format for HTML": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email": {
+      "main": [
+        [
+          {
+            "node": "Prep for Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "fix instagram username": {
+      "main": [
+        [
+          {
+            "node": "Start APIFY Actor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep for Telegram": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Survey": {
+      "main": [
+        [
+          {
+            "node": "IP Country Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Email",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Email": {
+      "main": [
+        [
+          {
+            "node": "Not empty? Send!",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram": {
+      "main": [
+        []
+      ]
+    },
+    "Not empty? Send!": {
+      "main": [
+        [
+          {
+            "node": "Format for HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "7aa90cc7-d12e-44ab-9bc7-178ad4610985",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9929cc5af7df0e25f14a5ca8bf9c20a3c0624d01c4a59cecd9d51602649c9fd5"
+  },
+  "id": "R4zgELUTCsp4Fbad",
+  "tags": []
+}
