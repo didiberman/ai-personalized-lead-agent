@@ -1,12 +1,12 @@
 # 🤖 AI-Personalized Lead Generator
 
-An automated, intelligent lead generation system built with [n8n](https://n8n.io). This project collects leads via a Telegram survey, enriches them through Instagram scraping using Apify, and crafts personalized outreach messages with Claude AI—all without manual intervention.
+An automated, intelligent lead generation system built with [n8n](https://n8n.io). This project collects from a website survey on GoHighLevel, enriches them through Instagram scraping using Apify, and crafts personalized outreach messages with Claude AI—all without manual intervention.
 
 ---
 
 ## 🧠 What It Does
 
-- Collects business profile data via an interactive Telegram bot
+- Collects business profile data from GoHighLevel (CourseCreator 360)
 - Uses Claude AI to generate tailored Instagram search terms based on lead criteria
 - Scrapes Instagram profiles using Apify
 - Scores leads with AI based on multiple weighted factors
