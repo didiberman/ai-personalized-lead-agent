@@ -1,4 +1,4 @@
-# 🤖 AI-Personalized Lead Generator
+# 🤖 AI-Personalized Lead Generator Agent
 
 An automated, intelligent lead generation system built with [n8n](https://n8n.io). This project collects from a website survey on GoHighLevel, enriches them through Instagram scraping using Apify, and crafts personalized outreach messages with Claude AI—all without manual intervention.
 
